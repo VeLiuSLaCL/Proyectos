@@ -7,7 +7,7 @@ import os
 st.set_page_config(page_title="Unificador de Excel", page_icon="📊")
 
 st.title("📊 Unificador de Archivos Excel")
-st.write("Sube múltiples archivos Excel. Se generará un solo archivo donde cada hoja tendrá el nombre del archivo original.")
+st.write("Sube múltiples archivos Excel (.xls o .xlsx). Se unificarán eliminando los encabezados 'Unnamed' y comenzando desde la fila 6.")
 
 # Subida de archivos (permite múltiples archivos xls y xlsx)
 uploaded_files = st.file_uploader(
@@ -32,16 +32,19 @@ if uploaded_files:
                     # Excel tiene un límite estricto de 31 caracteres para el nombre de las hojas
                     sheet_name = file_name[:31]
                     
-                    # Leer el archivo subido (lee la primera hoja por defecto, que es tu 'Sheet')
-                    df = pd.read_excel(file)
+                    # 1. header=None evita que Pandas genere las etiquetas 'Unnamed: X'
+                    df = pd.read_excel(file, header=None)
                     
-                    # Escribir los datos en una nueva hoja del archivo final
-                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    # 2. Corta las primeras 5 filas para empezar desde la fila 6 del archivo original
+                    df = df.iloc[5:].reset_index(drop=True)
+                    
+                    # 3. Escribir los datos en la hoja sin incluir índices ni fila de encabezados extra
+                    df.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
             
             # Obtener los datos binarios del buffer
             processed_data = output.getvalue()
             
-            st.success("✅ ¡Archivos unificados con éxito!")
+            st.success("✅ ¡Archivos unificados sin 'Unnamed' con éxito!")
             
             # Botón de descarga
             st.download_button(
