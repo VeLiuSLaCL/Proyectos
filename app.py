@@ -11,8 +11,8 @@ st.write("Sube múltiples archivos **.xlsx**. Se generará un solo archivo conse
 
 # Restringimos a xlsx para garantizar que se conserve el formato
 uploaded_files = st.file_uploader(
-    "Sube tus archivos Excel (.xlsx) aquí", 
-    type=['xlsx'],
+"Sube tus archivos Excel aquí", 
+    type=['xls', 'xlsx'], 
     accept_multiple_files=True
 )
 
