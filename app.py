@@ -3,12 +3,13 @@ import pandas as pd
 import io
 import os
 
+# Configuración básica de la página
 st.set_page_config(page_title="Unificador de Excel", page_icon="📊")
 
 st.title("📊 Unificador de Archivos Excel")
-st.write("Sube tus archivos Excel (.xls o .xlsx). Se unificarán en un solo archivo con un diseño visual profesional automático.")
+st.write("Sube múltiples archivos Excel. Se generará un solo archivo donde cada hoja tendrá el nombre del archivo original.")
 
-# Acepta tanto archivos antiguos (.xls) como nuevos (.xlsx)
+# Subida de archivos (permite múltiples archivos xls y xlsx)
 uploaded_files = st.file_uploader(
     "Sube tus archivos Excel aquí", 
     type=['xls', 'xlsx'], 
@@ -18,66 +19,35 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     st.info(f"Has subido {len(uploaded_files)} archivos.")
     
-    if st.button("Unificar y Aplicar Formato", type="primary"):
+    if st.button("Unificar Archivos", type="primary"):
+        # Crear un buffer en memoria para no guardar archivos temporales en el servidor
         output = io.BytesIO()
         
         try:
-            # Usamos xlsxwriter como motor para dar formato visual personalizado
+            # pd.ExcelWriter permite escribir múltiples hojas en un solo archivo
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                workbook = writer.book
-                
-                # Definición de formatos visuales
-                # 1. Encabezado con fondo azul oscuro y texto blanco en negrita
-                header_format = workbook.add_format({
-                    'bold': True,
-                    'text_wrap': True,
-                    'valign': 'vcenter',
-                    'align': 'center',
-                    'fg_color': '#1F4E78',
-                    'font_color': '#FFFFFF',
-                    'border': 1
-                })
-                
-                # 2. Formato de celdas normales con borde delgado gris
-                cell_format = workbook.add_format({
-                    'border': 1,
-                    'border_color': '#D9D9D9',
-                    'valign': 'vcenter'
-                })
-
                 for file in uploaded_files:
-                    # Obtener nombre sin extensión (máx 31 caracteres)
-                    file_name = os.path.splitext(file.name)[0][:31]
+                    # Obtener nombre sin extensión
+                    file_name = os.path.splitext(file.name)[0]
+                    # Excel tiene un límite estricto de 31 caracteres para el nombre de las hojas
+                    sheet_name = file_name[:31]
                     
-                    # Leer datos del archivo original
+                    # Leer el archivo subido (lee la primera hoja por defecto, que es tu 'Sheet')
                     df = pd.read_excel(file)
                     
-                    # Escribir los datos en la nueva hoja
-                    df.to_excel(writer, sheet_name=file_name, index=False)
-                    
-                    # Obtener la hoja actual de xlsxwriter para darle formato
-                    worksheet = writer.sheets[file_name]
-                    
-                    # Aplicar formato a los encabezados
-                    for col_num, value in enumerate(df.columns.values):
-                        worksheet.write(0, col_num, value, header_format)
-                        
-                        # Ajuste automático del ancho de la columna según el contenido
-                        max_len = max(
-                            df[value].astype(str).map(len).max() if not df.empty else 0,
-                            len(str(value))
-                        ) + 4
-                        worksheet.set_column(col_num, col_num, max(max_len, 12), cell_format)
-
+                    # Escribir los datos en una nueva hoja del archivo final
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            # Obtener los datos binarios del buffer
             processed_data = output.getvalue()
             
-            st.success("✅ ¡Archivos unificados y formateados con éxito!")
+            st.success("✅ ¡Archivos unificados con éxito!")
             
-            # Botón para descargar el resultado
+            # Botón de descarga
             st.download_button(
                 label="📥 Descargar Archivo Unificado",
                 data=processed_data,
-                file_name="Archivos_Unificados_Formateados.xlsx",
+                file_name="Archivos_Unificados.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
